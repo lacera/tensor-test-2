@@ -1,0 +1,19 @@
+.app-modifiable-list_style {
+    text-indent: 10px;
+    width: 200px;
+    height: 250px;
+    box-sizing: border-box;
+    position: relative;
+    float: left;
+    margin: 15px;
+    border: 2px solid #495460;
+    background-color: aliceblue;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+}
+.bad-data_style {
+    padding: 20px 10px;
+    text-indent: 0;
+    text-align: justify;
+    color: indianred;
+}
