@@ -7,11 +7,13 @@
         padding: 10px 0;
         border-bottom: 1px solid #a6a6a6;
     }
+        .enclosed-li:hover {
+            background-color: white;
+        }
     li :last-child {
         border-bottom: none;
     }
     .enclosed-ul__header {
-        width: 200px;
         line-height: 20px;
         border-top: 2px solid #a6a6a6;
         border-bottom: 2px solid #cfcfcf;

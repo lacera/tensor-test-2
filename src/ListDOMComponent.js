@@ -67,6 +67,10 @@ ListDOMComponent.prototype.getListTree = function () {
 ListDOMComponent.prototype.insertToDOM = function (id) {
     document.querySelector(id).appendChild(this.getListTree());
 };
+// удаление дерева компонента списка из DOM
+ListDOMComponent.prototype.deleteListTree = function () {
+    this._listTree.remove();
+};
 // установка скроллирования компонента
 ListDOMComponent.prototype.setSrolling = function (scrollTriggers) {
     var rootElement = $('html'),
@@ -109,7 +113,7 @@ ListDOMComponent.prototype.setSrolling = function (scrollTriggers) {
             // математика прокрутки списка вверх-вниз
             if ((ulTopChange >= divUlHeightDifference) && (ulTopChange <= mainDiv.offset().top)) {
                 changeMainUlTop(scrollModifier);
-            } else if (ulTopChange < divUlHeightDifference) {
+            } else if (ulTopChange < divUlHeightDifference && mainDiv.innerHeight() < mainUl.innerHeight()) {
                 changeMainUlTop(divUlHeightDifference);
             } else if (ulTopChange > mainDiv.offset().top) {
                 changeMainUlTop(mainDiv.offset().top);
@@ -167,5 +171,20 @@ ListDOMComponent.prototype.setFloatingHeader = function () {
 };
 // установка стиля компонента
 ListDOMComponent.prototype.setStyle = function (options) {
-    // применение таких опций, как размеры и цветовая гамма
+    // применение таких опций, как цветовая гамма
+    if (options.colorSpectrum == 'default') setColorSpectrum.call(this, '#f0f8ff', '#c0c0c0', '#dfdfdf', '#a6a6a6');
+    if (options.colorSpectrum == 'green') setColorSpectrum.call(this, '#e2faf1', '#77b700', '#c8e299', '#538000');
+
+    function setColorSpectrum(backgroundColor, gradientColorTop, gradientColorBottom, borderColor) {
+        var headerColorsObj = {
+            'background': 'linear-gradient(to bottom, ' + gradientColorTop + ', '+ gradientColorBottom +')',
+            'border-top': '2px solid ' + borderColor,
+            'border-bottom': '2px solid ' + borderColor
+        };
+
+        this._listTree.css('background-color', backgroundColor);
+        this._listTree.find('.main-ul').css('background-color', backgroundColor);
+        this._listTree.find('.enclosed-ul__header').css(headerColorsObj);
+        this._listTree.find('.main-ul__floating-header').css(headerColorsObj);
+    }
 };

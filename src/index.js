@@ -5,7 +5,7 @@ import $ from 'jquery';
 
 require('./css/main.ul.css');
 require('./css/enclosed.ul.css');
-require('./css/app.characters.list.css');
+require('./css/modifiable.list.css');
 
 $(document).ready(function() {
     // создаем экземпляр Модифицируемого списка асинхронно, дождавшись получения данных с сервера
@@ -27,8 +27,6 @@ $(document).ready(function() {
                     },
                     // на будущее, если развивать библиотеку, можно представить и такой набор свойств:
                     stylize: { // опционально, не обязательно, т.к. есть default-стилизация
-                        width: 200,
-                        height: 250,
                         colorSpectrum: 'default' // red, green
                     },
                     scroll: ['pressedMouseButton'], //
@@ -38,6 +36,39 @@ $(document).ready(function() {
 
             // Вставка списка. Передаем id элемента, который будет принимать список
             modifiableList1.renderIn('#app-modifiable-list-1');
+        })
+        .catch(function(error) {
+            // если данных не пришло - ошибка в лог
+            console.log(error);
+        });
+
+    getDataFromUrl("https://raw.githubusercontent.com/lacera/tensor_test/master/src/data.characters.json")
+        .then(data => {
+            // дождались данных, создаем
+            var modifiableList4 = new ModifiableList(
+                data, // данные из json
+                {
+                    grouping: { // опционально, не обязательно, т.к. есть default-группировка
+                        dataType: 'object', // указываем, что типом группируемых данных в массиве будут объекты // primitive
+                        target: 'key[secondName]', // группировка по указанному свойству объекта
+                        type: 'symbol[1]'  // группировка по первому символу объекта
+                    },
+                    sorting: { // опционально, не обязательно, т.к. есть default-сортировка
+                        target: 'all', // groups, items, none
+                        type: 'symbol', // numeric
+                        direction: 'increasing' // increasing
+                    },
+                    // на будущее, если развивать библиотеку, можно представить и такой набор свойств:
+                    stylize: { // опционально, не обязательно, т.к. есть default-стилизация
+                        colorSpectrum: 'green' // red, green
+                    },
+                    scroll: ['pressedMouseButton'], //
+                    floatingHeader: true
+                }
+            );
+
+            // Вставка списка. Передаем id элемента, который будет принимать список
+            modifiableList4.renderIn('#app-modifiable-list-4');
         })
         .catch(function(error) {
             // если данных не пришло - ошибка в лог
@@ -55,24 +86,21 @@ $(document).ready(function() {
             world: 'hell'
         }], // данные из потока (уже есть, дожидаться не надо)
         {
-            grouping: { // опционально, не обязательно, т.к. есть default-группировка
-                dataType: 'object', // указываем, что типом группируемых данных в массиве будут объекты // primitive
-                target: 'key[hello]', // группировка по указанному свойству объекта
-                type: 'symbol[1]'  // группировка по первому символу объекта
+            grouping: {
+                dataType: 'object',
+                target: 'key[hello]',
+                type: 'symbol[1]'
             },
-            sorting: { // опционально, не обязательно, т.к. есть default-сортировка
-                target: 'all', // groups, items, none
-                type: 'symbol', // numeric
-                direction: 'decreasing' // increasing
+            sorting: {
+                target: 'all',
+                type: 'symbol',
+                direction: 'increasing'
             },
-            // на будущее, если развивать библиотеку, можно представить и такой набор свойств:
-            stylize: { // опционально, не обязательно, т.к. есть default-стилизация
-                width: 200,
-                height: 250,
-                colorSpectrum: 'default' // red, green
+            stylize: {
+                colorSpectrum: 'green'
             },
-            scroll: ['wheel', 'pressedMouseButton', 'arrowKeys'], //
-            floatingHeader: true
+            scroll: ['wheel', 'pressedMouseButton', 'arrowKeys'],
+            floatingHeader: false
         }
     );
 

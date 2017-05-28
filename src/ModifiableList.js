@@ -18,48 +18,61 @@ export function ModifiableList(data, options) {
     ? options
     : {};
 
-    // создаем пустое приватное свойство сгруппированных данных
-    this._groupedData = {
-        data: [],
-        markers: {}
-    };
-
+    // объект для передачи в компонент с такими свойствами, как стилизация, скроллирование, плавающий заголовок
     this._notADataOptions = {};
 
-    if (!this._data) {
-        this._groupedData.data = this._data;
-    } else {
-        this.optionsAdaptation();
-    }
-
-    // создаем экземпляр списка в качестве DOM-компонента
-    this.listDOMComponent = new ListDOMComponent(this._groupedData);
+    // адаптируем и применяем все опции
+    this.optionsAdaptedApplying(this._options);
 }
 
 // вставляет готовый список в DOM-элемент с указанным id
 ModifiableList.prototype.renderIn = function (id) {
+    // если экземпляр компонента списка уже есть, - удаляем
+    if (this._listDOMComponent) {
+        this._listDOMComponent.deleteListTree();
+    }
+    // создаем экземпляр списка в качестве DOM-компонента
+    this._listDOMComponent = new ListDOMComponent(this._groupedData);
     // вставляем готовый список
-    this.listDOMComponent.insertToDOM(id);
-
+    this._listDOMComponent.insertToDOM(id);
+    // если сгруппированные данные есть, то применяем прочие настройки
     if (this._groupedData.data) {
-        // применяем стили к списку
-        this.listDOMComponent.setStyle(this._notADataOptions.style);
         // добавляем скроллирование списка
-        this.listDOMComponent.setSrolling(this._notADataOptions.scroll);
+        this._listDOMComponent.setSrolling(this._notADataOptions.scroll);
         // устанавливаем плавающий заголовок
         if (this._notADataOptions.floatingHeader) {
-            this.listDOMComponent.setFloatingHeader();
+            this._listDOMComponent.setFloatingHeader();
         }
+        // применяем стили к списку
+        this._listDOMComponent.setStyle(this._notADataOptions.style);
     }
 };
-// Адаптация опций группировки и их использование (из переданных при конструировании Списка или по default'у)
-ModifiableList.prototype.groupingOptionsAdaptation = function () {
+/**
+ * Метод, адаптирующий и применяющий опции группировки списка.
+ * Вызывается сразу, по умолчанию, при конструировании Списка (из опций, переданных при конструировании Списка).
+ * Может быть вызван отдельно с новыми опциями.
+ * Перерисовка Списка в DOM с новыми опциями производится отдельно методом renderIn.
+ *
+ * @param groupingOptions {object}
+ * пример: {dataType: 'object', target: 'key[firstName]', type: 'symbol[1]'}
+ * по умолчанию параметр принимает значения {dataType: 'object', target: 'key[firstObjFirstPropName]', type: 'symbol[1]'},
+ * где firstObjFirstPropName - первое собственное свойство первого объекта из массива данных
+ *
+ * возможные свойства для передачи в object-параметр:
+ * dataType: 'object' || 'primitive',
+ * target: 'key[propName]', где propName - свойство объекта, по которому будет произведена группировка,
+ * || 'word[i]', где i - номер слова из строки
+ * type: 'symbol[i]', где i - индекс символа (например, в значении свойства объекта, указанному в target),
+ * по которому будет произведена группировка
+ */
+ModifiableList.prototype.groupingOptionsAdaptedApplying = function (groupingOptions) {
     // задаем default-опции, если не переданы
-    var groupingOptions = this._options.grouping || {};
-
+    groupingOptions = groupingOptions || {};
     groupingOptions.dataType = groupingOptions.dataType || 'object';
     groupingOptions.type = groupingOptions.type || 'symbol[1]';
 
+    // создаем пустой приватный объект для сгруппированных данных
+    newGroupingDataCreation.call(this);
     // проверка корректности некоторых из переданных опций
     if (!propertiesValueValidation(
             groupingOptions, [
@@ -73,8 +86,8 @@ ModifiableList.prototype.groupingOptionsAdaptation = function () {
         // если таргет в опциях группировки не задан, то получаем в качестве таргета по умолчанию
         // ключ первого свойства первого объекта в массиве данных
         if (!Object.getOwnPropertyNames(this._data[0])[0]) {
-            console.error('Группировка не будет произведена, т.к. ' +
-                'для переданного в опциях типа данных "object" не найдено ключей свойств');
+            console.error('Группировка данных не будет произведена, т.к. ' +
+                'для переданного в опциях типа данных "object" в данных не найдено ключей свойств');
             return;
         }
         groupingOptions.target = groupingOptions.target || 'key[' + Object.getOwnPropertyNames(this._data[0])[0] +']';
@@ -137,13 +150,38 @@ ModifiableList.prototype.groupingOptionsAdaptation = function () {
     if (groupingOptions.dataType === 'primitive') {
         // группировка примитивов string, number, boolean, null, undefined в будущем
     }
+
+    // если отдельно данным методом вызвано изменение опции, то перезаписываем изменение в _options
+    if (groupingOptions != this._options.grouping) {
+        this._options.grouping = groupingOptions;
+    }
 };
-// Адаптация опций сортировки и их использование (из переданных при конструировании Списка или по default'у)
-ModifiableList.prototype.sortingOptionsAdaptation = function () {
+/**
+ * Метод, адаптирующий и применяющий опции сортировки списка.
+ * Вызывается сразу, по умолчанию, при конструировании Списка (из опций, переданных при конструировании Списка).
+ * Может быть вызван отдельно с новыми опциями.
+ * Перерисовка Списка в DOM с новыми опциями производится отдельно методом renderIn.
+ *
+ * @param sortingOptions {object},
+ * пример: {target: 'all', type: 'symbol', direction: 'decreasing'}
+ * по умолчанию параметр принимает значения {target: 'all', type: 'symbol', direction: 'increasing'}
+ *
+ * возможные свойства для передачи в object-параметр:
+ * target: 'none' || 'all' || 'groups' || 'items',
+ * type: 'symbol' || 'numeric',
+ * direction: 'increasing' || 'decreasing'
+ */
+ModifiableList.prototype.sortingOptionsAdaptedApplying = function (sortingOptions) {
+    if (!this._groupedData || !this._groupedData.markers || !this._groupedData.markers.target) {
+        console.error('Невозможно определить ключ сортировки. Возможно, ранее возникли проблемы с ' +
+            'группировкой данных или маркер сгруппированных данных теперь приведен к false-значению');
+        return;
+    }
     var directionModifier = 1,
-        objectKey = this._groupedData.markers.target;
+        objectKey = this._groupedData.markers.target; // зависимость от свойства, определенного при группировке
+
     // задаем default-опции, если не переданы
-    var sortingOptions = this._options.sorting || {};
+    sortingOptions = sortingOptions || {};
     sortingOptions.target = sortingOptions.target || 'all';
     sortingOptions.type = sortingOptions.type || 'symbol';
     sortingOptions.direction = sortingOptions.direction || 'increasing';
@@ -178,6 +216,11 @@ ModifiableList.prototype.sortingOptionsAdaptation = function () {
     function sortArrayByObjectProperty(array, prop) {
         array.sort((a, b) => {
             if (sortingOptions.type === 'numeric') {
+                if (isNaN(Number.parseFloat(a[prop])) || isNaN(Number.parseFloat(b[prop]))) {
+                    console.error('Числовая сортировка не будет произведена корректно, т.к. по крайней мере одно из ' +
+                        'сравниваемых значений ("' + a[prop] + '" или "' + b[prop] + '") при приведении к числу ' +
+                        'возвращает NaN');
+                }
                 return defineDirectionModifier(Number.parseFloat(a[prop]) > Number.parseFloat(b[prop]))
             }
             if (sortingOptions.type === 'symbol') {
@@ -191,35 +234,55 @@ ModifiableList.prototype.sortingOptionsAdaptation = function () {
                 : -1 * directionModifier
         }
     }
-};
-// Адаптация опций внешнего вида списка для дальнейшего их использования
-ModifiableList.prototype.stylizeOptionsAdaptation = function () {
-    // задаем default-опции, если не переданы
-    var stylizeOptions = this._options.stylize || {};
-    defineStylizeOptionByProperty('width', 200);
-    defineStylizeOptionByProperty('height', 250);
 
+    // если отдельно данным методом вызвано изменение опции, то перезаписываем изменение в _options
+    if (sortingOptions != this._options.sorting) {
+        this._options.sorting = sortingOptions;
+    }
+};
+/**
+ * Метод, адаптирующий опции стилизации списка. Вызывается сразу, по умолчанию, при конструировании Списка
+ (из опций, переданных при конструировании Списка).
+ * Может быть вызван отдельно с новыми опциями.
+ * Перерисовка Списка в DOM с новыми опциями производится отдельно методом renderIn.
+ *
+ * @param stylizeOptions {object},
+ * пример: {colorSpectrum: 'green'}
+ * по умолчанию параметр принимает значения {colorSpectrum: 'default'}
+ *
+ * возможные свойства для передачи в object-параметр:
+ * colorSpectrum: 'default' || 'green' || 'red'
+ */
+ModifiableList.prototype.stylizeOptionsAdaptation = function (stylizeOptions) {
+    // задаем default-опции, если не переданы
+    stylizeOptions = stylizeOptions || {};
     stylizeOptions.colorSpectrum = stylizeOptions.colorSpectrum || 'default';
 
     // проверка корректности некоторых из переданных опций
     propertiesValueValidation(
         stylizeOptions, [
-            {values: ['default'], inProp: 'colorSpectrum'}
+            {values: ['default', 'green', 'red'], inProp: 'colorSpectrum'}
         ]);
 
     this._notADataOptions.style = stylizeOptions;
-
-    // Принимаем переданные значения опций, если они целочисленные, иначе выставляем по умолчанию
-    function defineStylizeOptionByProperty(prop, elseValue) {
-        stylizeOptions[prop] = Number.isInteger(stylizeOptions[prop])
-            ? stylizeOptions[prop]
-            : elseValue;
+    // если отдельно данным методом вызвано изменение опции, то записываем изменение в _options
+    if (stylizeOptions != this._options.stylize) {
+        this._options.stylize = stylizeOptions;
     }
 };
-// Адаптация опции скроллирования списка для дальнейшего ее использования
-ModifiableList.prototype.scrollOptionAdaptation = function () {
-    var scrollOption = this._options.scroll;
-
+/**
+ * Метод, адаптирующий опцию скроллирования. Вызывается сразу, по умолчанию, при конструировании Списка
+ (из опций, переданных при конструировании Списка).
+ * Может быть вызван отдельно с новыми опциями.
+ * Перерисовка Списка в DOM с новыми опциями производится отдельно методом renderIn.
+ *
+ * @param scrollOption {Array},
+ * пример: ['wheel', 'pressedMouseButton']
+ * по умолчанию параметр принимает значение ['pressedMouseButton']
+ *
+ * возможные значения для передачи в Array-параметр: 'wheel', 'pressedMouseButton', 'arrowKeys'
+ */
+ModifiableList.prototype.scrollOptionAdaptation = function (scrollOption) {
     scrollOption = Array.isArray(scrollOption)
         ? scrollOption
         : ['pressedMouseButton'];
@@ -231,25 +294,62 @@ ModifiableList.prototype.scrollOptionAdaptation = function () {
         ]);
 
     this._notADataOptions.scroll = scrollOption;
+    // если отдельно данным методом вызвано изменение опции, то записываем изменение в _options
+    if (scrollOption != this._options.scroll) {
+        this._options.scroll = scrollOption;
+    }
 };
-// Адаптация опции плавающего над списком заголовка для дальнейшего ее использования
-ModifiableList.prototype.floatingHeaderOptionAdaptation = function () {
-    var floatingHeaderOption = this._options.floatingHeader;
-
+/**
+ * Метод, адаптирующий опцию плавающего заголовка. Вызывается сразу, по умолчанию, при конструировании Списка
+ (из опций, переданных при конструировании Списка).
+ * Может быть вызван отдельно с новыми опциями.
+ * Перерисовка Списка в DOM с новыми опциями производится отдельно методом renderIn.
+ *
+ * @param floatingHeaderOption {boolean},
+ * пример: false
+ * по умолчанию параметр принимает значение true
+ *
+ * возможные значения для передачи в boolean-параметр: true || false
+ */
+ModifiableList.prototype.floatingHeaderOptionAdaptation = function (floatingHeaderOption) {
     floatingHeaderOption = typeof floatingHeaderOption == 'boolean'
         ? floatingHeaderOption
         : true;
 
     this._notADataOptions.floatingHeader = floatingHeaderOption;
+    // если отдельно данным методом вызвано изменение опции, то записываем изменение в _options
+    if (floatingHeaderOption != this._options.floatingHeader) {
+        this._options.floatingHeader = floatingHeaderOption;
+    }
 };
-// Адаптация всех опций (из переданных при конструировании Списка или по default'у)
-ModifiableList.prototype.optionsAdaptation = function () {
+/**
+ * Метод, адаптирующий и применяющий все опции. Вызывается сразу, по умолчанию, при конструировании Списка
+ (из опций, переданных при конструировании Списка).
+ * Может быть вызван отдельно с новыми опциями.
+ * Перерисовка Списка в DOM с новыми опциями производится отдельно методом renderIn.
+ *
+ * @param options {object} такой же объект с такими же свойствами, что передается в качестве второго аргумента
+ * при создании экземляра ModifiableList
+ *
+ * возможные свойства для передачи в object-параметр: grouping {object}, sorting {object}, stylize {object},
+ * scroll {Array}, floatingHeader {boolean}
+ */
+ModifiableList.prototype.optionsAdaptedApplying = function (options) {
+    options = options || {};
 
-    this.groupingOptionsAdaptation();
-    this.sortingOptionsAdaptation();
-    this.stylizeOptionsAdaptation();
-    this.scrollOptionAdaptation();
-    this.floatingHeaderOptionAdaptation();
+    // если пришли false-данные, то не адаптируем и не применяем опции
+    if (!this._data) {
+        // создаем пустой приватный объект для сгруппированных данных
+        newGroupingDataCreation.call(this);
+        this._groupedData.data = null;
+        return;
+    }
+
+    this.groupingOptionsAdaptedApplying(options.grouping);
+    this.sortingOptionsAdaptedApplying(options.sorting);
+    this.stylizeOptionsAdaptation(options.stylize);
+    this.scrollOptionAdaptation(options.scroll);
+    this.floatingHeaderOptionAdaptation(options.floatingHeader);
 
     console.log(this._options);
     console.log(this._groupedData);
@@ -297,4 +397,14 @@ function propertyValuesLengthValidation(data, objectKey, keyIndex) {
 
         return true;
     });
+}
+// создание нового объекта сгруппированных данных
+function newGroupingDataCreation() {
+    if (this._groupedData) {
+        delete this._groupedData;
+    }
+    this._groupedData = {
+        data: [],
+        markers: {}
+    };
 }
